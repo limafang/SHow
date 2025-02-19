@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>实验数据展示</title>
+  <!-- 使用 Google Fonts 改善字体 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Roboto', Arial, sans-serif;
+      background: #f0f2f5;
+      padding: 20px;
+      color: #333;
+    }
+    
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    
+    .filter-container {
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    .filter-container button {
+      background: #1890ff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    
+    .filter-container button:hover {
+      background: #40a9ff;
+    }
+    
+    .filter-container button::after {
+      content: '▼';
+      font-size: 12px;
+      transition: transform 0.3s;
+    }
+    
+    .filter-container button.expanded::after {
+      transform: rotate(180deg);
+    }
+    
+    .tag-selection {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      transition: max-height 0.3s ease-out;
+      overflow: hidden;
+      max-height: 0;
+    }
+    
+    .tag-selection.visible {
+      max-height: 120px; /* 根据标签数量调整 */
+    }
+    
+    .tag {
+      background: #e6f7ff;
+      color: #1890ff;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    
+    .tag:hover {
+      background: #bae7ff;
+    }
+    
+    .tag.selected {
+      background: #1890ff;
+      color: white;
+    }
+    
+    .button-container {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    
+    .operation-btn {
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .create-btn {
+      background: #1890ff;
+      color: white;
+    }
+    
+    .create-btn:hover {
+      background: #40a9ff;
+    }
+    
+    .edit-btn {
+      background: #faad14;
+      color: white;
+    }
+    
+    .edit-btn:hover {
+      background: #ffc53d;
+    }
+    
+    .delete-batch-btn {
+      background: #ff4d4f;
+      color: white;
+    }
+    
+    .delete-batch-btn:hover {
+      background: #ff7875;
+    }
+    
+    .export-btn {
+      background: #722ed1;
+      color: white;
+    }
+    
+    .export-btn:hover {
+      background: #9254de;
+    }
+    
+    .compare-btn {
+      background: #52c41a;
+      color: white;
+    }
+    
+    .compare-btn:hover {
+      background: #73d13d;
+    }
+
+    .operation-btn.disabled {
+      background: #d9d9d9;
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
+    
+    .selection-info {
+      color: #666;
+      line-height: 36px;
+      display: none;
+    }
+    
+    .selection-info.show {
+      display: block;
+    }
+    
+    .cards-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 20px;
+      align-items: start;
+    }
+    
+    .card {
+      background: white;
+      border-radius: 8px;
+      padding: 15px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      cursor: pointer;
+      position: relative;
+      transition: border 0.3s;
+    }
+    
+    .card.selected {
+      border: 2px solid #1890ff;
+    }
+    
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      font-weight: 500;
+    }
+    
+    .select-indicator {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 20px;
+      height: 20px;
+      border: 2px solid #ddd;
+      border-radius: 4px;
+    }
+    
+    .card.selected .select-indicator {
+      background: #1890ff;
+      border-color: #1890ff;
+    }
+    
+    .select-indicator::after {
+      content: '✓';
+      color: white;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: none;
+    }
+    
+    .card.selected .select-indicator::after {
+      display: block;
+    }
+    
+    .tags {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+      font-size: 13px;
+    }
+    
+    .prompt {
+      margin-top: 10px;
+      padding: 10px;
+      background: #f9f9f9;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    .toggle-btn {
+      color: #1890ff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 10px;
+      user-select: none;
+      font-size: 14px;
+    }
+
+    .toggle-btn::after {
+      content: '▼';
+      font-size: 12px;
+      transition: transform 0.3s;
+    }
+
+    .toggle-btn.expanded::after {
+      transform: rotate(180deg);
+    }
+
+    .content-panel {
+      margin-top: 10px;
+      padding: 0;
+      background: #f0f8ff;
+      border-radius: 4px;
+      max-height: 0;
+      opacity: 0;
+      overflow: hidden;
+      transition: all 0.3s ease-out;
+      font-size: 14px;
+    }
+
+    .content-panel.expanded {
+      max-height: 1000px;
+      opacity: 1;
+      padding: 10px;
+      margin-top: 10px;
+    }
+    
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+      padding: 10px;
+    }
+    
+    .modal.show {
+      display: flex;
+    }
+    
+    .modal-content {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 700px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .modal-content h2 {
+      margin-bottom: 20px;
+      color: #1890ff;
+      font-size: 24px;
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: #333;
+    }
+    
+    .form-group input, 
+    .form-group textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #d9d9d9;
+      border-radius: 6px;
+      font-size: 14px;
+      transition: all 0.3s;
+      resize: vertical;
+    }
+    
+    .form-group textarea {
+      min-height: 100px;
+    }
+    
+    .form-group input:focus, 
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #40a9ff;
+      box-shadow: 0 0 0 2px rgba(24,144,255,0.2);
+    }
+    
+    .button-group {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      margin-top: 24px;
+    }
+    
+    .button-group button {
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .button-group button[type="submit"] {
+      background: #1890ff;
+      color: white;
+      border: none;
+    }
+    
+    .button-group button[type="submit"]:hover {
+      background: #40a9ff;
+    }
+    
+    .button-group button[type="button"] {
+      background: white;
+      color: #666;
+      border: 1px solid #d9d9d9;
+    }
+    
+    .button-group button[type="button"]:hover {
+      color: #40a9ff;
+      border-color: #40a9ff;
+    }
+
+    .delete-btn {
+      color: #ff4d4f;
+      cursor: pointer;
+      margin-left: 10px;
+      font-size: 14px;
+      display: none;
+    }
+
+    .card:hover .delete-btn {
+      display: inline;
+    }
+
+    .delete-btn:hover {
+      color: #ff7875;
+    }
+
+    .form-hint {
+      font-size: 12px;
+      color: #666;
+      margin-top: 4px;
+    }
+    
+    .compare-view {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #f0f2f5;
+      z-index: 1100;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    
+    .compare-view.show {
+      display: block;
+    }
+    
+    .compare-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .compare-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      align-items: start;
+    }
+    
+    .compare-card {
+      background: white;
+      border-radius: 8px;
+      padding: 15px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .compare-card h3 {
+      margin-bottom: 10px;
+      color: #1890ff;
+    }
+    
+    .compare-section {
+      margin: 15px 0;
+      padding: 10px;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    
+    .compare-section.prompt {
+      background: #f9f9f9;
+    }
+    
+    .compare-section.thinking {
+      background: #b7f9ea;
+    }
+    
+    .compare-section.result-content {
+      background: #f0f8ff;
+    }
+    
+    .exit-compare {
+      background: #ff4d4f;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    
+    .exit-compare:hover {
+      background: #ff7875;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="filter-container">
+      <button onclick="toggleTagSelection(this)">选择标签筛选</button>
+      <div class="tag-selection" id="tagSelection"></div>
+    </div>
+    <div class="button-container">
+      <span id="selectionInfo" class="selection-info">已选择 0 个卡片</span>
+      <button id="editBtn" class="operation-btn edit-btn" onclick="editSelected()" style="display: none">
+        <span>编辑</span>
+      </button>
+      <button id="deleteBatchBtn" class="operation-btn delete-batch-btn" onclick="deleteSelected()" style="display: none">
+        <span>删除所选</span>
+      </button>
+      <button id="compareBtn" class="operation-btn compare-btn" onclick="showCompareView()" style="display: none">
+        <span>比对选中卡片</span>
+      </button>
+      <button class="operation-btn export-btn" onclick="exportData()">
+        <span>导出数据</span>
+      </button>
+      <button class="operation-btn create-btn" onclick="showModal()">
+        <span>创建实验卡片</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="cards-container" id="cardsContainer"></div>
+
+  <div class="modal" id="createModal">
+    <div class="modal-content">
+      <h2>创建实验卡片</h2>
+      <form id="experimentForm">
+        <div class="form-group">
+          <label>实验名称</label>
+          <input type="text" name="name" required placeholder="输入实验名称">
+        </div>
+        <div class="form-group">
+          <label>实验参数</label>
+          <textarea name="parameters" required placeholder="每行输入一个参数，将自动作为标签使用"></textarea>
+          <div class="form-hint">每个参数将自动作为标签使用，便于后续筛选和分类</div>
+        </div>
+        <div class="form-group">
+          <label>Prompt</label>
+          <textarea name="prompt" required placeholder="输入实验使用的prompt"></textarea>
+        </div>
+        <div class="form-group">
+          <label>LLM思考过程</label>
+          <textarea name="thinking" required placeholder="记录LLM的思考过程"></textarea>
+        </div>
+        <div class="form-group">
+          <label>实验结果</label>
+          <textarea name="result" required placeholder="记录实验结果"></textarea>
+        </div>
+        <div class="button-group">
+          <button type="button" onclick="hideModal()">取消</button>
+          <button type="submit">创建</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="compare-view" id="compareView">
+    <div class="compare-header">
+      <h2>实验对比（已选择 <span id="compareCount">0</span> 个实验）</h2>
+      <button class="exit-compare" onclick="exitCompareView()">退出对比视图</button>
+    </div>
+    <div class="compare-grid" id="compareGrid"></div>
+  </div>
+
+  <script>
+    let experiments = [];
+    let selectedExperiments = new Set();
+    let selectedTags = new Set();
+    let isEditing = false;
+    let editingId = null;
+    // 存储展开状态
+    let expandedStates = {
+      thinking: new Set(),
+      result: new Set()
+    };
+
+    // 从localStorage加载数据
+    function loadExperiments() {
+      const savedExperiments = localStorage.getItem('experiments');
+      if (savedExperiments) {
+        experiments = JSON.parse(savedExperiments);
+        renderCards();
+        updateTagSelection();
+      }
+    }
+
+    // 保存数据到localStorage
+    function saveExperiments() {
+      localStorage.setItem('experiments', JSON.stringify(experiments));
+    }
+
+    // 删除选中的实验
+    function deleteSelected() {
+      if (selectedExperiments.size === 0) return;
+      
+      if (confirm(`确定要删除选中的 ${selectedExperiments.size} 个实验吗？`)) {
+        experiments = experiments.filter(exp => !selectedExperiments.has(exp.id));
+        selectedExperiments.clear();
+        saveExperiments();
+        renderCards();
+        updateTagSelection();
+      }
+    }
+
+    // 编辑选中的实验
+    function editSelected() {
+      if (selectedExperiments.size !== 1) return;
+      
+      const expId = Array.from(selectedExperiments)[0];
+      const exp = experiments.find(e => e.id === expId);
+      if (!exp) return;
+
+      isEditing = true;
+      editingId = exp.id;
+      
+      // 填充表单
+      const form = document.getElementById('experimentForm');
+      form.name.value = exp.name;
+      form.parameters.value = exp.parameters.join('\n');
+      form.prompt.value = exp.prompt;
+      form.thinking.value = exp.thinkingProcess;
+      form.result.value = exp.result;
+
+      // 更新模态框标题和按钮
+      document.querySelector('.modal-content h2').textContent = '编辑实验卡片';
+      document.querySelector('.modal-content button[type="submit"]').textContent = '保存';
+      
+      showModal();
+    }
+
+    function updateSelectionInfo() {
+      const selectionInfo = document.getElementById('selectionInfo');
+      const compareBtn = document.getElementById('compareBtn');
+      const editBtn = document.getElementById('editBtn');
+      const deleteBatchBtn = document.getElementById('deleteBatchBtn');
+      
+      if (selectedExperiments.size > 0) {
+        selectionInfo.textContent = `已选择 ${selectedExperiments.size} 个卡片`;
+        selectionInfo.classList.add('show');
+        compareBtn.style.display = 'flex';
+        deleteBatchBtn.style.display = 'flex';
+        
+        // 只有选中一个卡片时才显示编辑按钮
+        editBtn.style.display = selectedExperiments.size === 1 ? 'flex' : 'none';
+      } else {
+        selectionInfo.classList.remove('show');
+        compareBtn.style.display = 'none';
+        editBtn.style.display = 'none';
+        deleteBatchBtn.style.display = 'none';
+      }
+    }
+
+    document.getElementById('experimentForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      const params = formData.get('parameters').split('\n').filter(item => item.trim() !== '');
+      
+      const experimentData = {
+        name: formData.get('name'),
+        parameters: params,
+        prompt: formData.get('prompt'),
+        thinkingProcess: formData.get('thinking'),
+        result: formData.get('result'),
+        tags: params
+      };
+
+      if (isEditing && editingId) {
+        // 更新现有实验
+        const index = experiments.findIndex(exp => exp.id === editingId);
+        if (index !== -1) {
+          experimentData.id = editingId;
+          experiments[index] = experimentData;
+        }
+      } else {
+        // 创建新实验
+        experimentData.id = Date.now();
+        experiments.push(experimentData);
+      }
+
+      saveExperiments();
+      renderCards();
+      updateTagSelection();
+      hideModal();
+      
+      // 重置编辑状态
+      isEditing = false;
+      editingId = null;
+      e.target.reset();
+      
+      // 重置模态框标题和按钮
+      document.querySelector('.modal-content h2').textContent = '创建实验卡片';
+      document.querySelector('.modal-content button[type="submit"]').textContent = '创建';
+    });
+
+    function hideModal() {
+      document.getElementById('createModal').classList.remove('show');
+      // 重置编辑状态
+      isEditing = false;
+      editingId = null;
+      // 重置表单
+      document.getElementById('experimentForm').reset();
+      // 重置模态框标题和按钮
+      document.querySelector('.modal-content h2').textContent = '创建实验卡片';
+      document.querySelector('.modal-content button[type="submit"]').textContent = '创建';
+    }
+
+    function showModal() {
+      const modal = document.getElementById('createModal');
+      modal.classList.add('show');
+    }
+
+    function showCompareView() {
+      const compareView = document.getElementById('compareView');
+      const compareGrid = document.getElementById('compareGrid');
+      const compareCount = document.getElementById('compareCount');
+      
+      if (selectedExperiments.size < 2) {
+        alert('请至少选择两个实验进行对比');
+        return;
+      }
+      
+      compareView.classList.add('show');
+      compareCount.textContent = selectedExperiments.size;
+      
+      compareGrid.innerHTML = '';
+      selectedExperiments.forEach(id => {
+        const exp = experiments.find(e => e.id === id);
+        if (!exp) return;
+        
+        // 检查展开状态
+        const isThinkingExpanded = expandedStates.thinking.has(exp.id);
+        const isResultExpanded = expandedStates.result.has(exp.id);
+        
+        const card = document.createElement('div');
+        card.className = 'compare-card';
+        card.innerHTML = `
+          <h3>实验 ${exp.name}</h3>
+          <div class="tags">
+            ${exp.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+          </div>
+          <div class="compare-section prompt">
+            <strong>提示词：</strong>
+            <div>${exp.prompt}</div>
+          </div>
+          <div class="toggle-btn ${isThinkingExpanded ? 'expanded' : ''}" data-toggle="thinking" data-id="${exp.id}">
+            ${isThinkingExpanded ? '收起思考过程' : '思考过程'}
+          </div>
+          <div class="content-panel ${isThinkingExpanded ? 'expanded' : ''}" id="compare-thinking-${exp.id}">
+            ${exp.thinkingProcess || '暂无思考过程'}
+          </div>
+          <div class="toggle-btn ${isResultExpanded ? 'expanded' : ''}" data-toggle="result" data-id="${exp.id}">
+            ${isResultExpanded ? '收起结果' : '查看结果'}
+          </div>
+          <div class="content-panel ${isResultExpanded ? 'expanded' : ''}" id="compare-result-${exp.id}">
+            ${exp.result || '暂无结果'}
+          </div>
+        `;
+        compareGrid.appendChild(card);
+      });
+    }
+
+    function exitCompareView() {
+      const compareView = document.getElementById('compareView');
+      compareView.classList.remove('show');
+    }
+
+    function toggleCardSelection(id) {
+      if (selectedExperiments.has(id)) {
+        selectedExperiments.delete(id);
+      } else {
+        selectedExperiments.add(id);
+      }
+      
+      // 只更新选中状态，不重新渲染整个卡片
+      const card = document.querySelector(`.card[data-id="${id}"]`);
+      if (card) {
+        card.classList.toggle('selected');
+      }
+      
+      updateSelectionInfo();
+    }
+
+    function renderCards() {
+      const container = document.getElementById('cardsContainer');
+      container.innerHTML = '';
+
+      let filteredExperiments = experiments;
+      if (selectedTags.size > 0) {
+        filteredExperiments = experiments.filter(exp => 
+          exp.tags.some(tag => selectedTags.has(tag))
+        );
+      }
+
+      filteredExperiments.forEach(exp => {
+        const card = document.createElement('div');
+        card.className = `card ${selectedExperiments.has(exp.id) ? 'selected' : ''}`;
+        card.dataset.id = exp.id;
+        
+        // 检查展开状态并应用相应的类
+        const isThinkingExpanded = expandedStates.thinking.has(exp.id);
+        const isResultExpanded = expandedStates.result.has(exp.id);
+        
+        card.innerHTML = `
+          <div class="select-indicator"></div>
+          <div class="card-header">
+            <span>实验 ${exp.name}</span>
+          </div>
+          <div class="tags">
+            ${exp.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+          </div>
+          <div class="prompt">${exp.prompt}</div>
+          <div class="toggle-btn ${isThinkingExpanded ? 'expanded' : ''}" data-toggle="thinking" data-id="${exp.id}">
+            ${isThinkingExpanded ? '收起思考过程' : '思考过程'}
+          </div>
+          <div class="content-panel ${isThinkingExpanded ? 'expanded' : ''}" id="thinking-${exp.id}">
+            ${exp.thinkingProcess || '暂无思考过程'}
+          </div>
+          <div class="toggle-btn ${isResultExpanded ? 'expanded' : ''}" data-toggle="result" data-id="${exp.id}">
+            ${isResultExpanded ? '收起结果' : '查看结果'}
+          </div>
+          <div class="content-panel ${isResultExpanded ? 'expanded' : ''}" id="result-${exp.id}">
+            ${exp.result || '暂无结果'}
+          </div>
+        `;
+        container.appendChild(card);
+      });
+      updateSelectionInfo();
+    }
+
+    // 通用的面板切换函数，用于思考过程和结果区域
+    function toggleContentPanel(type, id, toggleBtn, isCompareView = false) {
+      const panelId = isCompareView ? `compare-${type}-${id}` : `${type}-${id}`;
+      const panel = document.getElementById(panelId);
+      if (!panel) return;
+
+      panel.classList.toggle('expanded');
+      toggleBtn.classList.toggle('expanded');
+      
+      // 更新展开状态
+      if (!isCompareView) {
+        if (panel.classList.contains('expanded')) {
+          expandedStates[type].add(id);
+        } else {
+          expandedStates[type].delete(id);
+        }
+      }
+      
+      if (panel.classList.contains('expanded')) {
+        if (type === 'result') {
+          toggleBtn.textContent = '收起结果';
+        } else {
+          toggleBtn.textContent = '收起思考过程';
+        }
+      } else {
+        if (type === 'result') {
+          toggleBtn.textContent = '查看结果';
+        } else {
+          toggleBtn.textContent = '思考过程';
+        }
+      }
+    }
+
+    // 使用事件委托处理卡片点击及切换内容的逻辑
+    document.getElementById('cardsContainer').addEventListener('click', function(e) {
+      const cardElement = e.target.closest('.card');
+      const toggleBtn = e.target.closest('.toggle-btn');
+      
+      // 如果点击的是切换按钮，只处理展开/收起
+      if (toggleBtn) {
+        const type = toggleBtn.dataset.toggle;
+        const id = toggleBtn.dataset.id;
+        toggleContentPanel(type, id, toggleBtn);
+        e.stopPropagation();
+        return;
+      }
+      
+      // 如果点击的是卡片（但不是内容区域），则切换选择状态
+      if (cardElement && !e.target.closest('.content-panel') && !e.target.closest('.prompt')) {
+        const id = Number(cardElement.dataset.id);
+        toggleCardSelection(id);
+      }
+    });
+
+    // 为比较视图添加事件委托
+    document.getElementById('compareGrid').addEventListener('click', function(e) {
+      if (e.target.classList.contains('toggle-btn')) {
+        const type = e.target.dataset.toggle;
+        const id = e.target.dataset.id;
+        const panel = document.getElementById(`compare-${type}-${id}`);
+        toggleContentPanel(type, id, e.target, true);
+        e.stopPropagation();
+      }
+    });
+
+    function updateTagSelection() {
+      const tagContainer = document.getElementById('tagSelection');
+      tagContainer.innerHTML = '';
+      const allTags = new Set();
+      experiments.forEach(exp => {
+        exp.tags.forEach(tag => allTags.add(tag));
+      });
+      Array.from(allTags).sort().forEach(tag => {
+        const tagElement = document.createElement('span');
+        tagElement.className = `tag ${selectedTags.has(tag) ? 'selected' : ''}`;
+        tagElement.textContent = tag;
+        tagElement.onclick = (e) => {
+          if (selectedTags.has(tag)) {
+            selectedTags.delete(tag);
+            tagElement.classList.remove('selected');
+          } else {
+            selectedTags.add(tag);
+            tagElement.classList.add('selected');
+          }
+          renderCards();
+          e.stopPropagation();
+        };
+        tagContainer.appendChild(tagElement);
+      });
+    }
+    
+    function toggleTagSelection(button) {
+      const tagContainer = document.getElementById('tagSelection');
+      tagContainer.classList.toggle('visible');
+      button.classList.toggle('expanded');
+    }
+    
+    // 页面加载时读取数据
+    window.addEventListener('load', loadExperiments);
+  </script>
+</body>
+</html>
