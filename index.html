@@ -1,0 +1,1283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>实验数据管理系统</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Heroicons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@heroicons/vue@1.0.4/dist/heroicons.min.css">
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- Highlight.js -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+    <!-- Animate.css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <!-- Marked.js -->
+    <script src="js/marked.min.js"></script>
+    <script src="mathjax/tex-mml-chtml.js"></script>
+    <script>
+      window.MathJax = {
+          tex: {
+              inlineMath: [['$', '$'], ['\\(', '\\)']],
+              displayMath: [['$$', '$$'], ['\\[', '\\]']],
+              processEscapes: true,
+              processEnvironments: true
+          },
+          options: {
+              skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+          }
+      };
+    </script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            200: '#c7d2fe',
+                            300: '#a5b4fc',
+                            400: '#818cf8',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            800: '#3730a3',
+                            900: '#312e81',
+                            950: '#1e1b4b',
+                        },
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.3s ease-in-out',
+                        'slide-up': 'slideUp 0.3s ease-in-out',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        [x-cloak] { display: none !important; }
+        
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #cecece;
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a5a5a5;
+        }
+
+        /* 淡入动画 */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideUp {
+            from { 
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to { 
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        .animate-slide-up {
+            animation: slideUp 0.3s ease-in-out;
+        }
+        
+        /* 标签输入框样式 */
+        .tags-input .tags-input-wrapper {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            padding: 0.25rem;
+            gap: 0.5rem;
+        }
+        
+        .tags-input .tag {
+            display: flex;
+            align-items: center;
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            background-color: rgba(99, 102, 241, 0.1);
+            color: rgb(67, 56, 202);
+        }
+        
+        .tags-input .tag button {
+            margin-left: 0.5rem;
+            font-weight: bold;
+            font-size: 1rem;
+            line-height: 1;
+        }
+        
+        .tags-input input {
+            flex: 1;
+            min-width: 60px;
+            background: transparent;
+            outline: none;
+            border: none;
+            padding: 0.25rem;
+        }
+        
+        /* 卡片悬停效果 */
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* 标签筛选样式 */
+        .tag-filter {
+            transition: all 0.2s ease;
+        }
+        
+        .tag-filter:hover {
+            background-color: rgba(99, 102, 241, 0.2);
+        }
+        
+        /* 思考过程块样式 */
+        .block-header {
+            transition: all 0.2s ease;
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        .block-title {
+            font-weight: 600;
+            font-size: 1.05rem;
+            color: #4338ca;
+        }
+        
+        .dark .block-title {
+            color: #a5b4fc;
+        }
+        
+        /* 折叠控制 */
+        .collapsible-section {
+            border-radius: 0.5rem;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .collapsible-header {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            padding: 1rem;
+            border-bottom: 1px solid #e5e7eb;
+            background-color: #f9fafb;
+            user-select: none;
+        }
+        
+        .dark .collapsible-header {
+            background-color: #1f2937;
+            border-color: #374151;
+        }
+        
+        .collapsible-icon {
+            transition: transform 0.3s ease;
+        }
+        
+        .rotate-180 {
+            transform: rotate(180deg);
+        }
+        
+        .collapsible-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        
+        .collapsible-content.expanded {
+            max-height: 100vh;
+            overflow: auto;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
+    <div x-data="app()" x-cloak class="min-h-screen">
+        <!-- 顶部导航 -->
+        <nav class="bg-white dark:bg-gray-800 shadow-sm">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16">
+                    <div class="flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-primary-600 mr-3" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd" />
+                        </svg>
+                        <span class="font-bold text-xl text-gray-900 dark:text-white">实验数据管理系统</span>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <button @click="toggleDarkMode()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
+                            <template x-if="darkMode">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd" />
+                                </svg>
+                            </template>
+                            <template x-if="!darkMode">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+                                </svg>
+                            </template>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- 主内容区域 -->
+        <main class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+            <!-- 操作按钮 -->
+            <div class="flex flex-wrap justify-between items-center mb-6">
+                <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">实验数据管理</h1>
+                <div class="flex flex-wrap gap-2 mt-4 sm:mt-0">
+                    <button @click="showAddExperimentModal = true" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                        </svg>
+                        添加实验
+                    </button>
+                    <button @click="showImportModal = true" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-primary-700 bg-primary-100 hover:bg-primary-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:bg-primary-900 dark:text-primary-300 dark:hover:bg-primary-800">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                        </svg>
+                        导入实验
+                    </button>
+                    <div class="relative" @click.away="exportMenuOpen = false">
+                        <button @click="exportMenuOpen = !exportMenuOpen" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-primary-700 bg-primary-100 hover:bg-primary-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:bg-primary-900 dark:text-primary-300 dark:hover:bg-primary-800">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                            </svg>
+                            导出
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                        <div x-show="exportMenuOpen" class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 divide-y divide-gray-100 dark:divide-gray-700 z-10 animate-fade-in">
+                            <div class="py-1">
+                                <button @click="exportSelected(); exportMenuOpen = false" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">导出选中实验</button>
+                                <button @click="exportAll(); exportMenuOpen = false" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">导出所有实验</button>
+                            </div>
+                        </div>
+                    </div>
+                    <button @click="compareSelected()" x-bind:class="{ 'opacity-50 cursor-not-allowed': selectedExperiments.size < 2 }" x-bind:disabled="selectedExperiments.size < 2" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-primary-700 bg-primary-100 hover:bg-primary-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:bg-primary-900 dark:text-primary-300 dark:hover:bg-primary-800">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                        </svg>
+                        对比实验
+                    </button>
+                    <button @click="confirmDelete()" x-bind:class="{ 'opacity-50 cursor-not-allowed': selectedExperiments.size === 0 }" x-bind:disabled="selectedExperiments.size === 0" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:bg-red-900 dark:text-red-300 dark:hover:bg-red-800">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                        </svg>
+                        删除选中
+                    </button>
+                </div>
+            </div>
+
+            <!-- 筛选区域 -->
+            <div x-show="activeView === 'list'" class="bg-white dark:bg-gray-800 shadow rounded-lg mb-6 p-4 animate-fade-in">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-medium text-gray-900 dark:text-white">筛选实验</h2>
+                    <button @click="clearAllFilters()" class="text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300 text-sm">
+                        清除所有筛选
+                    </button>
+                </div>
+                <div class="mb-4">
+                    <label for="search-input" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">搜索</label>
+                    <div class="relative rounded-md shadow-sm">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <input id="search-input" x-model="searchTerm" @input="filterExperiments()" type="text" class="focus:ring-primary-500 focus:border-primary-500 block w-full pl-10 py-2 sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-md" placeholder="搜索实验标题或提示词...">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">按标签筛选</label>
+                    <div x-show="allTags.size === 0" class="text-gray-500 dark:text-gray-400 text-sm italic">暂无标签</div>
+                    <div class="flex flex-wrap gap-2" id="tags-filter">
+                        <template x-for="tag in sortedTags" :key="tag">
+                            <button 
+                                @click="toggleTagFilter(tag)"
+                                :class="{ 'bg-primary-500 text-white': activeTags.has(tag), 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300': !activeTags.has(tag) }"
+                                class="tag-filter px-3 py-1 rounded-full text-sm font-medium">
+                                <span x-text="tag"></span>
+                            </button>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 实验列表视图 -->
+            <div x-show="activeView === 'list'" class="animate-slide-up">
+                <div x-show="filteredExperiments.length === 0" class="text-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                    <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">没有找到匹配的实验</h3>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">尝试调整搜索条件或清除筛选。</p>
+                    <div class="mt-6">
+                        <button @click="clearAllFilters()" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                            清除筛选
+                        </button>
+                    </div>
+                </div>
+
+                <div x-show="filteredExperiments.length > 0" class="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                    <template x-for="experiment in filteredExperiments" :key="experiment.id">
+                        <div :class="{ 'ring-2 ring-primary-500': selectedExperiments.has(experiment.id) }" 
+                            class="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg card-hover">
+                            <div class="absolute top-4 right-4">
+                                <input 
+                                    type="checkbox" 
+                                    :checked="selectedExperiments.has(experiment.id)" 
+                                    @click.stop="toggleCardSelection(experiment.id)"
+                                    class="h-4 w-4 text-primary-600 focus:ring-primary-500 rounded cursor-pointer">
+                            </div>
+                            <div @click="showExperimentDetail(experiment.id)" class="px-4 py-5 sm:p-6 cursor-pointer">
+                                <h3 class="text-lg font-medium text-gray-900 dark:text-white truncate" x-text="experiment.title"></h3>
+                                <div class="mt-2 max-h-24 overflow-hidden text-sm text-gray-500 dark:text-gray-400" x-text="experiment.prompt"></div>
+                                <div class="mt-4 flex flex-wrap gap-2">
+                                    <template x-for="tag in experiment.tags" :key="tag">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-300">
+                                            <span x-text="tag"></span>
+                                        </span>
+                                    </template>
+                                </div>
+                                <div class="mt-4 text-xs text-gray-500 dark:text-gray-400" x-text="formatDate(experiment.date)"></div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- 实验详情视图 -->
+            <div x-show="activeView === 'detail'" class="animate-slide-up">
+                <div class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
+                    <div class="px-4 py-5 sm:px-6 flex justify-between items-center border-b border-gray-200 dark:border-gray-700">
+                        <div>
+                            <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white" x-text="currentExperiment.title"></h3>
+                            <p class="mt-1 max-w-2xl text-sm text-gray-500 dark:text-gray-400" x-text="formatDate(currentExperiment.date)"></p>
+                        </div>
+                        <button @click="backToList()" class="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 shadow-sm text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+                            </svg>
+                            返回列表
+                        </button>
+                    </div>
+                    <div class="px-4 py-5 sm:p-6">
+                        <!-- 标签 -->
+                        <div class="flex flex-wrap gap-2 mb-6">
+                            <template x-for="tag in currentExperiment.tags" :key="tag">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-300">
+                                    <span x-text="tag"></span>
+                                </span>
+                            </template>
+                        </div>
+
+                        <!-- 统一的三个可折叠区块 -->
+                        <div class="space-y-6">
+                            <!-- 实验提示词 -->
+                            <div class="collapsible-section bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
+                                <div @click="toggleSection('prompt')" class="collapsible-header">
+                                    <svg xmlns="http://www.w3.org/2000/svg" :class="{'rotate-180': !collapsedSections.prompt}" class="h-5 w-5 mr-2 text-primary-500 collapsible-icon transition-transform" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                    </svg>
+                                    <h4 class="text-lg font-medium text-gray-900 dark:text-white flex items-center">
+                                        实验提示词
+                                    </h4>
+                                </div>
+                                <div :class="{'expanded': !collapsedSections.prompt}" class="collapsible-content">
+                                    <div class="p-4 bg-gray-50 dark:bg-gray-900">
+                                        <div x-html="renderContent(currentExperiment.prompt)"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 思考过程 -->
+                            <div class="collapsible-section bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
+                                <div @click="toggleSection('thinking')" class="collapsible-header">
+                                    <svg xmlns="http://www.w3.org/2000/svg" :class="{'rotate-180': !collapsedSections.thinking}" class="h-5 w-5 mr-2 text-primary-500 collapsible-icon transition-transform" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                    </svg>
+                                    <h4 class="text-lg font-medium text-gray-900 dark:text-white flex items-center">
+                                        思考过程
+                                    </h4>
+                                </div>
+                                <div :class="{'expanded': !collapsedSections.thinking}" class="collapsible-content">
+                                    <div class="p-4 bg-gray-50 dark:bg-gray-900 space-y-4 max-h-[60vh] overflow-y-auto">
+                                        <template x-for="(block, index) in currentExperiment.blocks" :key="index">
+                                            <div class="bg-white dark:bg-gray-800 rounded-md shadow-sm">
+                                                <div class="block-header p-3 bg-gray-100 dark:bg-gray-700 rounded-t-md" @click="toggleBlock(index)">
+                                                    <div class="flex justify-between items-center">
+                                                        <div class="block-title" x-show="block.title" x-text="block.title"></div>
+                                                        <svg xmlns="http://www.w3.org/2000/svg" :class="{'rotate-180': !collapsedBlocks[index]}" class="h-5 w-5 text-gray-500 dark:text-gray-400 transition-transform" viewBox="0 0 20 20" fill="currentColor">
+                                                            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                                        </svg>
+                                                    </div>
+                                                </div>
+                                                <div x-show="!collapsedBlocks[index]" class="p-4">
+                                                    <div x-html="renderContent(block.content)"></div>
+                                                    <template x-if="block.extra">
+                                                        <div class="text-gray-500 dark:text-gray-400 text-sm border-t border-gray-200 dark:border-gray-700 pt-2 italic whitespace-pre-wrap" x-text="block.extra"></div>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 回复结果 -->
+                            <div class="collapsible-section bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
+                                <div @click="toggleSection('response')" class="collapsible-header">
+                                    <svg xmlns="http://www.w3.org/2000/svg" :class="{'rotate-180': !collapsedSections.response}" class="h-5 w-5 mr-2 text-primary-500 collapsible-icon transition-transform" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                    </svg>
+                                    <h4 class="text-lg font-medium text-gray-900 dark:text-white flex items-center">
+                                        回复结果
+                                    </h4>
+                                </div>
+                                <div :class="{'expanded': !collapsedSections.response}" class="collapsible-content">
+                                    <div class="p-4 bg-gray-50 dark:bg-gray-900 max-h-[60vh] overflow-auto">
+                                        <div x-html="renderContent(currentExperiment.response)"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 对比视图 -->
+            <div x-show="activeView === 'comparison'" class="animate-slide-up">
+                <div class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
+                    <div class="px-4 py-5 sm:px-6 flex justify-between items-center border-b border-gray-200 dark:border-gray-700">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white">实验对比</h3>
+                        <button @click="backToList()" class="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 shadow-sm text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+                            </svg>
+                            返回列表
+                        </button>
+                    </div>
+                    <div class="px-4 py-5 sm:p-6 overflow-x-auto">
+                        <div class="grid grid-flow-col auto-cols-fr gap-6">
+                            <template x-for="(experiment, expIndex) in comparisonExperiments" :key="experiment.id">
+                                <div class="min-w-[300px]">
+                                    <div class="bg-white dark:bg-gray-800 rounded-lg p-4 mb-6 shadow">
+                                        <h4 class="text-lg font-medium text-gray-900 dark:text-white mb-2" x-text="experiment.title"></h4>
+                                        <div class="flex flex-wrap gap-2 mb-3">
+                                            <template x-for="tag in experiment.tags" :key="tag">
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-300">
+                                                    <span x-text="tag"></span>
+                                                </span>
+                                            </template>
+                                        </div>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400" x-text="formatDate(experiment.date)"></p>
+                                    </div>
+
+                                    <!-- 统一的折叠式区块（对比视图中） -->
+                                    <!-- 提示词 -->
+                                    <div class="collapsible-section bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg mb-6">
+                                        <div @click="toggleComparisonSection('prompt', expIndex)" class="collapsible-header">
+                                            <svg xmlns="http://www.w3.org/2000/svg" :class="{'rotate-180': !getComparisonSectionState('prompt', expIndex)}" class="h-5 w-5 mr-2 text-primary-500 collapsible-icon transition-transform" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                            </svg>
+                                            <h5 class="font-medium text-gray-900 dark:text-white">实验提示词</h5>
+                                        </div>
+                                        <div :class="{'expanded': !getComparisonSectionState('prompt', expIndex)}" class="collapsible-content">
+                                            <div class="p-4 bg-gray-50 dark:bg-gray-900">
+                                                <div x-html="renderContent(experiment.prompt)"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- 思考过程 -->
+                                    <div class="collapsible-section bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg mb-6" x-show="experiment.blocks && experiment.blocks.length > 0">
+                                        <div @click="toggleComparisonSection('thinking', expIndex)" class="collapsible-header">
+                                            <svg xmlns="http://www.w3.org/2000/svg" :class="{'rotate-180': !getComparisonSectionState('thinking', expIndex)}" class="h-5 w-5 mr-2 text-primary-500 collapsible-icon transition-transform" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                            </svg>
+                                            <h5 class="font-medium text-gray-900 dark:text-white">思考过程</h5>
+                                        </div>
+                                        <div :class="{'expanded': !getComparisonSectionState('thinking', expIndex)}" class="collapsible-content">
+                                            <div class="bg-gray-50 dark:bg-gray-900 p-4 space-y-4 max-h-[50vh] overflow-y-auto">
+                                                <template x-for="(block, blockIndex) in experiment.blocks" :key="blockIndex">
+                                                    <div class="bg-white dark:bg-gray-800 rounded-md shadow-sm">
+                                                        <div class="block-header p-3 bg-gray-100 dark:bg-gray-700 rounded-t-md" @click="toggleComparisonBlock(expIndex, blockIndex)">
+                                                            <div class="flex justify-between items-center">
+                                                                <div class="block-title" x-show="block.title" x-text="block.title"></div>
+                                                                <svg xmlns="http://www.w3.org/2000/svg" :class="{'rotate-180': !getComparisonBlockState(expIndex, blockIndex)}" class="h-5 w-5 text-gray-500 dark:text-gray-400 transition-transform" viewBox="0 0 20 20" fill="currentColor">
+                                                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                                                </svg>
+                                                            </div>
+                                                        </div>
+                                                        <div x-show="!getComparisonBlockState(expIndex, blockIndex)" class="p-4">
+                                                            <div x-html="renderContent(block.content)"></div>
+                                                            <template x-if="block.extra">
+                                                                <div class="text-gray-500 dark:text-gray-400 text-sm border-t border-gray-200 dark:border-gray-700 pt-2 italic whitespace-pre-wrap" x-text="block.extra"></div>
+                                                            </template>
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- 回复结果 -->
+                                    <div class="collapsible-section bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
+                                        <div @click="toggleComparisonSection('response', expIndex)" class="collapsible-header">
+                                            <svg xmlns="http://www.w3.org/2000/svg" :class="{'rotate-180': !getComparisonSectionState('response', expIndex)}" class="h-5 w-5 mr-2 text-primary-500 collapsible-icon transition-transform" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                            </svg>
+                                            <h5 class="font-medium text-gray-900 dark:text-white">回复结果</h5>
+                                        </div>
+                                        <div :class="{'expanded': !getComparisonSectionState('response', expIndex)}" class="collapsible-content">
+                                            <div class="p-4 bg-gray-50 dark:bg-gray-900 max-h-[50vh] overflow-auto">
+                                                <div x-html="renderContent(experiment.response)"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- 添加实验弹窗 -->
+        <div x-show="showAddExperimentModal" class="fixed inset-0 overflow-y-auto z-50" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+            <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <div @click="showAddExperimentModal = false" class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+                <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+                <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95">
+                    <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                        <div class="sm:flex sm:items-start">
+                            <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-primary-100 dark:bg-primary-900 sm:mx-0 sm:h-10 sm:w-10">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-primary-600 dark:text-primary-400" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                                <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="modal-title">
+                                    添加新实验
+                                </h3>
+                                <div class="mt-4">
+                                    <form id="upload-form" @submit.prevent="handleFormSubmit">
+                                        <div class="space-y-6">
+                                            <div>
+                                                <label for="title" class="block text-sm font-medium text-gray-700 dark:text-gray-300">实验标题*</label>
+                                                <input type="text" id="title" x-model="formData.title" class="mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-md" required>
+                                            </div>
+                                            <div>
+                                                <label for="prompt" class="block text-sm font-medium text-gray-700 dark:text-gray-300">实验用提示词*</label>
+                                                <textarea id="prompt" x-model="formData.prompt" rows="3" class="mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-md" required></textarea>
+                                            </div>
+                                            <div>
+                                                <label for="tags" class="block text-sm font-medium text-gray-700 dark:text-gray-300">实验标签（回车分隔多个标签）</label>
+                                                <div class="mt-1 tags-input">
+                                                    <div class="tags-input-wrapper border border-gray-300 dark:border-gray-700 rounded-md focus-within:ring-1 focus-within:ring-primary-500 focus-within:border-primary-500 dark:bg-gray-900">
+                                                        <template x-for="tag in Array.from(currentTags)" :key="tag">
+                                                            <span class="tag">
+                                                                <span x-text="tag"></span>
+                                                                <button type="button" @click="removeTag(tag)">&times;</button>
+                                                            </span>
+                                                        </template>
+                                                        <input 
+                                                            type="text" 
+                                                            id="tags" 
+                                                            placeholder="输入标签后按回车添加" 
+                                                            @keydown.enter.prevent="addTag($event.target.value); $event.target.value = ''"
+                                                            class="dark:bg-gray-900 dark:text-gray-100">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <div class="flex justify-between items-center">
+                                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">思考过程*</label>
+                                                    <button type="button" @click="addNewBlock" class="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-primary-700 bg-primary-100 hover:bg-primary-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:bg-primary-900 dark:text-primary-300 dark:hover:bg-primary-800">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                                            <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                                                        </svg>
+                                                        添加思考过程块
+                                                    </button>
+                                                </div>
+                                                <div class="mt-1 space-y-4" id="blocks-container">
+                                                    <template x-for="(block, index) in formData.blocks" :key="index">
+                                                        <div class="border border-gray-300 dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-900">
+                                                            <div class="bg-gray-100 dark:bg-gray-700 p-3 rounded-t-md">
+                                                                <label :for="'block-title-'+index" class="block text-sm font-medium text-gray-700 dark:text-gray-300">块标题</label>
+                                                                <input :id="'block-title-'+index" x-model="block.title" type="text" class="mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-md">
+                                                            </div>
+                                                            <div class="p-4">
+                                                                <div class="mb-3">
+                                                                    <label :for="'block-content-'+index" class="block text-sm font-medium text-gray-700 dark:text-gray-300">块内容* (支持Markdown语法)</label>
+                                                                    <textarea :id="'block-content-'+index" x-model="block.content" rows="4" class="mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-md" required></textarea>
+                                                                </div>
+                                                                <div class="mb-3">
+                                                                    <label :for="'block-extra-'+index" class="block text-sm font-medium text-gray-700 dark:text-gray-300">额外内容（可选）</label>
+                                                                    <textarea :id="'block-extra-'+index" x-model="block.extra" rows="2" class="mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-md"></textarea>
+                                                                </div>
+                                                                <div class="flex justify-end">
+                                                                    <button 
+                                                                        type="button" 
+                                                                        @click="removeBlock(index)" 
+                                                                        class="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:bg-red-900 dark:text-red-300 dark:hover:bg-red-800">
+                                                                        删除此块
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label for="response" class="block text-sm font-medium text-gray-700 dark:text-gray-300">回复结果*</label>
+                                                <textarea id="response" x-model="formData.response" rows="5" class="mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-md" required></textarea>
+                                            </div>
+                                        </div>
+                                        <div class="mt-6 sm:flex sm:flex-row-reverse">
+                                            <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-primary-600 text-base font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:ml-3 sm:w-auto sm:text-sm">
+                                                保存实验
+                                            </button>
+                                            <button type="button" @click="showAddExperimentModal = false" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-700 text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:mt-0 sm:w-auto sm:text-sm">
+                                                取消
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 导入弹窗 -->
+        <div x-show="showImportModal" class="fixed inset-0 overflow-y-auto z-50" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+            <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <div @click="showImportModal = false" class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+                <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+                <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95">
+                    <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                        <div class="sm:flex sm:items-start">
+                            <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-primary-100 dark:bg-primary-900 sm:mx-0 sm:h-10 sm:w-10">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-primary-600 dark:text-primary-400" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                                <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="modal-title">
+                                    导入实验数据
+                                </h3>
+                                <div class="mt-4">
+                                    <div class="space-y-4">
+                                        <div>
+                                            <label for="import-data" class="block text-sm font-medium text-gray-700 dark:text-gray-300">粘贴JSON数据：</label>
+                                            <textarea id="import-data" x-model="importData" rows="8" class="mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-md"></textarea>
+                                        </div>
+                                        <div>
+                                            <label for="import-file" class="block text-sm font-medium text-gray-700 dark:text-gray-300">或者上传文件：</label>
+                                            <input type="file" id="import-file" @change="handleFileUpload" accept=".json" class="mt-1 block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 dark:file:bg-primary-900 dark:file:text-primary-300 hover:file:bg-primary-100 dark:hover:file:bg-primary-800">
+                                        </div>
+                                    </div>
+                                    <div class="mt-6 sm:flex sm:flex-row-reverse">
+                                        <button type="button" @click="importExperiments" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-primary-600 text-base font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:ml-3 sm:w-auto sm:text-sm">
+                                            导入
+                                        </button>
+                                        <button type="button" @click="showImportModal = false" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-700 text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:mt-0 sm:w-auto sm:text-sm">
+                                            取消
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 删除确认弹窗 -->
+        <div x-show="showDeleteConfirmModal" class="fixed inset-0 overflow-y-auto z-50" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+            <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <div @click="showDeleteConfirmModal = false" class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+                <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+                <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95">
+                    <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                        <div class="sm:flex sm:items-start">
+                            <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900 sm:mx-0 sm:h-10 sm:w-10">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-600 dark:text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                                <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="modal-title">
+                                    删除确认
+                                </h3>
+                                <div class="mt-2">
+                                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                                        确定要删除选中的 <span class="font-semibold" x-text="selectedExperiments.size"></span> 个实验吗？此操作不可撤销！
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                        <button type="button" @click="deleteSelected" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm">
+                            确定删除
+                        </button>
+                        <button type="button" @click="showDeleteConfirmModal = false" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                            取消
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function app() {
+            return {
+                // 全局状态
+                experiments: [],
+                selectedExperiments: new Set(),
+                currentExperiment: null,
+                comparisonExperiments: [],
+                allTags: new Set(),
+                activeTags: new Set(),
+                currentTags: new Set(),
+                searchTerm: '',
+                activeView: 'list',
+                darkMode: localStorage.getItem('darkMode') === 'true',
+                showAddExperimentModal: false,
+                showImportModal: false,
+                showDeleteConfirmModal: false,
+                exportMenuOpen: false,
+                importData: '',
+                
+                // 折叠状态
+                collapsedSections: {
+                    prompt: false,
+                    thinking: false,
+                    response: false
+                },
+                collapsedBlocks: {},
+                collapsedComparisonSections: {},
+                collapsedComparisonBlocks: {},
+                
+                // 表单数据
+                formData: {
+                    title: '',
+                    prompt: '',
+                    blocks: [],
+                    response: ''
+                },
+                
+                // 初始化
+                init() {
+                    this.setupDarkMode();
+                    this.currentExperiment = null;
+                    this.collapsedBlocks = [];
+                    this.collapsedSections = {
+                        prompt: true,
+                        response: true
+                    };
+                    
+                    // 加载实验数据
+                    this.loadExperiments();
+                    
+                    // 默认添加一个空的思考过程块
+                    if (this.formData.blocks.length === 0) {
+                        this.addNewBlock();
+                    }
+                },
+                renderContent(content) {
+                    if (!content) return '';
+                    // 先用marked将markdown转为HTML
+                    const html = marked.parse(content);
+                    
+                    // 在nextTick时让MathJax重新渲染
+                    setTimeout(() => {
+                        if (window.MathJax) {
+                            window.MathJax.typesetPromise && window.MathJax.typesetPromise();
+                        }
+                    }, 0);
+                    
+                    return html;
+                },
+                // 设置深色模式
+                setupDarkMode() {
+                    if (this.darkMode || (!('darkMode' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                        document.documentElement.classList.add('dark');
+                        this.darkMode = true;
+                    } else {
+                        document.documentElement.classList.remove('dark');
+                        this.darkMode = false;
+                    }
+                },
+                
+                // 切换深色模式
+                toggleDarkMode() {
+                    this.darkMode = !this.darkMode;
+                    localStorage.setItem('darkMode', this.darkMode);
+                    
+                    if (this.darkMode) {
+                        document.documentElement.classList.add('dark');
+                    } else {
+                        document.documentElement.classList.remove('dark');
+                    }
+                },
+                
+                // 加载实验数据
+                loadExperiments() {
+                    const stored = localStorage.getItem('experiments');
+                    if (stored) {
+                        this.experiments = JSON.parse(stored);
+                        
+                        // 收集所有标签
+                        this.allTags.clear();
+                        this.experiments.forEach(exp => {
+                            if (exp.tags && Array.isArray(exp.tags)) {
+                                exp.tags.forEach(tag => {
+                                    this.allTags.add(tag);
+                                });
+                            } else {
+                                // 确保每个实验都有标签数组
+                                exp.tags = [];
+                            }
+                        });
+                    }
+                },
+                
+                // 保存实验数据
+                saveExperiments() {
+                    localStorage.setItem('experiments', JSON.stringify(this.experiments));
+                },
+                
+                // 获取排序后的标签
+                get sortedTags() {
+                    return Array.from(this.allTags).sort();
+                },
+                
+                // 获取经过筛选的实验
+                get filteredExperiments() {
+                    return this.experiments.filter(exp => {
+                        // 搜索词筛选
+                        if (this.searchTerm && !exp.title.toLowerCase().includes(this.searchTerm.toLowerCase()) && 
+                           !exp.prompt.toLowerCase().includes(this.searchTerm.toLowerCase())) {
+                            return false;
+                        }
+                        
+                        // 标签筛选
+                        if (this.activeTags.size > 0) {
+                            if (!exp.tags || exp.tags.length === 0) {
+                                return false;
+                            }
+                            
+                            // 检查是否包含所有活动标签
+                            const hasAllTags = Array.from(this.activeTags).every(tag => 
+                                exp.tags.includes(tag)
+                            );
+                            
+                            if (!hasAllTags) {
+                                return false;
+                            }
+                        }
+                        
+                        return true;
+                    });
+                },
+                
+                // 添加标签
+                addTag(tag) {
+                    tag = tag.trim();
+                    if (tag && !this.currentTags.has(tag)) {
+                        this.currentTags.add(tag);
+                    }
+                },
+                
+                // 移除标签
+                removeTag(tag) {
+                    this.currentTags.delete(tag);
+                },
+                
+                // 添加新的思考过程块
+                addNewBlock() {
+                    this.formData.blocks.push({
+                        title: '',
+                        content: '',
+                        extra: ''
+                    });
+                },
+                
+                // 移除思考过程块
+                removeBlock(index) {
+                    this.formData.blocks.splice(index, 1);
+                    if (this.formData.blocks.length === 0) {
+                        this.addNewBlock();
+                    }
+                },
+                
+                // 切换折叠部分
+                toggleSection(section) {
+                    this.collapsedSections[section] = !this.collapsedSections[section];
+                },
+                
+                // 切换思考过程块折叠
+                toggleBlock(index) {
+                    this.collapsedBlocks[index] = !this.collapsedBlocks[index];
+                },
+                
+                // 切换对比视图中的部分折叠
+                toggleComparisonSection(section, expIndex) {
+                    const key = `${section}_${expIndex}`;
+                    this.collapsedComparisonSections[key] = !this.collapsedComparisonSections[key];
+                },
+                
+                // 获取对比视图部分的折叠状态
+                getComparisonSectionState(section, expIndex) {
+                    const key = `${section}_${expIndex}`;
+                    return this.collapsedComparisonSections[key] || false;
+                },
+                
+                // 切换对比视图中思考过程块的折叠
+                toggleComparisonBlock(expIndex, blockIndex) {
+                    const key = `${expIndex}_${blockIndex}`;
+                    this.collapsedComparisonBlocks[key] = !this.collapsedComparisonBlocks[key];
+                },
+                
+                // 获取对比视图块的折叠状态
+                getComparisonBlockState(expIndex, blockIndex) {
+                    const key = `${expIndex}_${blockIndex}`;
+                    return this.collapsedComparisonBlocks[key] || false;
+                },
+                
+                // 处理表单提交
+                handleFormSubmit() {
+                    // 验证表单
+                    if (!this.formData.title || !this.formData.prompt || !this.formData.response) {
+                        alert('请填写必填项！');
+                        return;
+                    }
+                    
+                    for (const block of this.formData.blocks) {
+                        if (!block.content) {
+                            alert('思考过程块的内容是必填的！');
+                            return;
+                        }
+                    }
+                    
+                    // 创建新实验对象
+                    const newExperiment = {
+                        id: Date.now().toString(),
+                        title: this.formData.title,
+                        prompt: this.formData.prompt,
+                        blocks: JSON.parse(JSON.stringify(this.formData.blocks)),
+                        response: this.formData.response,
+                        date: new Date().toISOString(),
+                        tags: Array.from(this.currentTags)
+                    };
+                    
+                    // 添加到实验列表
+                    this.experiments.unshift(newExperiment);
+                    
+                    // 更新所有标签集合
+                    newExperiment.tags.forEach(tag => {
+                        this.allTags.add(tag);
+                    });
+                    
+                    // 保存到本地存储
+                    this.saveExperiments();
+                    
+                    // 重置表单
+                    this.formData = {
+                        title: '',
+                        prompt: '',
+                        blocks: [{
+                            title: '',
+                            content: '',
+                            extra: ''
+                        }],
+                        response: ''
+                    };
+                    this.currentTags.clear();
+                    
+                    // 关闭弹窗
+                    this.showAddExperimentModal = false;
+                    
+                    // 显示成功消息
+                    alert('实验保存成功！');
+                },
+                
+                // 切换卡片选择状态
+                toggleCardSelection(id) {
+                    if (this.selectedExperiments.has(id)) {
+                        this.selectedExperiments.delete(id);
+                    } else {
+                        this.selectedExperiments.add(id);
+                    }
+                },
+                
+                // 显示实验详情
+                showExperimentDetail(id) {
+                    const experiment = this.experiments.find(exp => exp.id === id);
+                    if (!experiment) return;
+                    
+                    this.currentExperiment = experiment;
+                    
+                    // 初始化折叠状态
+                    this.collapsedSections = {
+                        prompt: false,
+                        thinking: false,
+                        response: false
+                    };
+                    
+                    // 初始化思考过程块折叠状态
+                    this.collapsedBlocks = {};
+                    experiment.blocks.forEach((_, index) => {
+                        this.collapsedBlocks[index] = false;
+                    });
+                    
+                    this.activeView = 'detail';
+                },
+                
+                // 返回列表
+                backToList() {
+                    this.activeView = 'list';
+                    this.currentExperiment = null;
+                    this.comparisonExperiments = [];
+                },
+                
+                // 切换标签筛选
+                toggleTagFilter(tag) {
+                    if (this.activeTags.has(tag)) {
+                        this.activeTags.delete(tag);
+                    } else {
+                        this.activeTags.add(tag);
+                    }
+                    
+                    this.filterExperiments();
+                },
+                
+                // 清除所有筛选
+                clearAllFilters() {
+                    this.searchTerm = '';
+                    this.activeTags.clear();
+                },
+                
+                // 过滤实验
+                filterExperiments() {
+                    // 通过计算属性 filteredExperiments 自动处理
+                },
+                
+                // 显示删除确认对话框
+                confirmDelete() {
+                    if (this.selectedExperiments.size === 0) {
+                        alert('请先选择要删除的实验');
+                        return;
+                    }
+                    
+                    this.showDeleteConfirmModal = true;
+                },
+                
+                // 删除选中实验
+                deleteSelected() {
+                    // 删除前重新收集所有标签
+                    this.allTags.clear();
+                    
+                    this.experiments = this.experiments.filter(exp => {
+                        const keep = !this.selectedExperiments.has(exp.id);
+                        
+                        // 如果保留此实验，收集其标签
+                        if (keep && exp.tags) {
+                            exp.tags.forEach(tag => this.allTags.add(tag));
+                        }
+                        
+                        return keep;
+                    });
+                    
+                    this.selectedExperiments.clear();
+                    this.saveExperiments();
+                    this.showDeleteConfirmModal = false;
+                },
+                
+                // 比较选中实验
+                compareSelected() {
+                    if (this.selectedExperiments.size < 2) {
+                        alert('请至少选择两个实验进行比较');
+                        return;
+                    }
+                    
+                    // 获取选中的实验
+                    this.comparisonExperiments = this.experiments.filter(exp => this.selectedExperiments.has(exp.id));
+                    
+                    // 初始化对比折叠状态
+                    this.collapsedComparisonSections = {};
+                    this.collapsedComparisonBlocks = {};
+                    
+                    // 为每个实验的每个部分设置初始折叠状态
+                    this.comparisonExperiments.forEach((exp, expIndex) => {
+                        // 设置部分折叠状态
+                        ['prompt', 'thinking', 'response'].forEach(section => {
+                            this.collapsedComparisonSections[`${section}_${expIndex}`] = false;
+                        });
+                        
+                        // 设置每个思考过程块的折叠状态
+                        exp.blocks.forEach((_, blockIndex) => {
+                            this.collapsedComparisonBlocks[`${expIndex}_${blockIndex}`] = false;
+                        });
+                    });
+                    
+                    this.activeView = 'comparison';
+                },
+                
+                // 处理文件上传
+                handleFileUpload(e) {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        this.importData = e.target.result;
+                    };
+                    reader.readAsText(file);
+                },
+                
+                // 导入实验
+                importExperiments() {
+                    if (!this.importData) {
+                        alert('请输入或上传JSON数据');
+                        return;
+                    }
+                    
+                    try {
+                        const importedExperiments = JSON.parse(this.importData);
+                        
+                        // 验证导入的数据结构
+                        if (!Array.isArray(importedExperiments)) {
+                            throw new Error('数据格式错误，应为实验对象数组');
+                        }
+                        
+                        // 验证每个实验对象的结构
+                        importedExperiments.forEach(exp => {
+                            if (!exp.id || !exp.title || !exp.prompt || !Array.isArray(exp.blocks) || !exp.response) {
+                                throw new Error('实验数据格式不完整');
+                            }
+                            
+                            // 确保有标签字段
+                            if (!exp.tags) {
+                                exp.tags = [];
+                            }
+                            
+                            // 收集新标签
+                            exp.tags.forEach(tag => {
+                                this.allTags.add(tag);
+                            });
+                        });
+                        
+                        // 合并实验数据
+                        const newExperiments = [...importedExperiments, ...this.experiments];
+                        
+                        // 去重
+                        const uniqueExperiments = [];
+                        const ids = new Set();
+                        
+                        newExperiments.forEach(exp => {
+                            if (!ids.has(exp.id)) {
+                                ids.add(exp.id);
+                                uniqueExperiments.push(exp);
+                            }
+                        });
+                        
+                        this.experiments = uniqueExperiments;
+                        this.saveExperiments();
+                        
+                        // 关闭弹窗
+                        this.showImportModal = false;
+                        this.importData = '';
+                        document.getElementById('import-file').value = '';
+                        
+                        alert(`成功导入 ${importedExperiments.length} 个实验`);
+                    } catch (error) {
+                        alert(`导入失败: ${error.message}`);
+                    }
+                },
+                
+                // 导出选中实验
+                exportSelected() {
+                    if (this.selectedExperiments.size === 0) {
+                        alert('请先选择要导出的实验');
+                        return;
+                    }
+                    
+                    const selectedData = this.experiments.filter(exp => this.selectedExperiments.has(exp.id));
+                    this.downloadJSON(selectedData, '选中实验数据');
+                    this.exportMenuOpen = false;
+                },
+                
+                // 导出所有实验
+                exportAll() {
+                    if (this.experiments.length === 0) {
+                        alert('没有实验数据可导出');
+                        return;
+                    }
+                    
+                    this.downloadJSON(this.experiments, '所有实验数据');
+                    this.exportMenuOpen = false;
+                },
+                
+                // 下载JSON文件
+                downloadJSON(data, filename) {
+                    const jsonStr = JSON.stringify(data, null, 2);
+                    const blob = new Blob([jsonStr], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${filename}_${new Date().toISOString().slice(0, 10)}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                },
+                
+                // 格式化日期
+                formatDate(dateString) {
+                    const date = new Date(dateString);
+                    return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+                }
+            };
+        }
+    </script>
+</body>
+</html>
